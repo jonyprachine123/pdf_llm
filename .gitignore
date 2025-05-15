@@ -30,7 +30,7 @@ uploads/
 *.pdf
 *.docx
 *.txt
-vector_store/
+# vector_store/ - Keeping this to preserve embeddings
 
 # IDE files
 .idea/
