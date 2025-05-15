@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document LLM Reader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --body-bg: #ffffff;
+            --sidebar-bg: #f7f7f8;
+            --chat-bg: #ffffff;
+            --border-color: #e5e5e5;
+            --user-msg-bg: #f7f7f8;
+            --bot-msg-bg: #ffffff;
+            --text-color: #343541;
+            --secondary-text: #6e6e80;
+            --accent-color: #10a37f;
+            --hover-color: #f1f1f1;
+        }
+        
+        [data-bs-theme="dark"] {
+            --body-bg: #343541;
+            --sidebar-bg: #202123;
+            --chat-bg: #343541;
+            --border-color: #4d4d4f;
+            --user-msg-bg: #444654;
+            --bot-msg-bg: #343541;
+            --text-color: #ececf1;
+            --secondary-text: #c5c5d2;
+            --accent-color: #10a37f;
+            --hover-color: #2a2b32;
+        }
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: var(--body-bg);
+            color: var(--text-color);
+            transition: background-color 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+            transition: background-color 0.3s ease;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            background-color: var(--chat-bg);
+            transition: background-color 0.3s ease;
+            scroll-behavior: smooth;
+        }
+        
+        .message-row {
+            display: flex;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .user-row {
+            background-color: var(--user-msg-bg);
+        }
+        
+        .bot-row {
+            background-color: var(--bot-msg-bg);
+        }
+        
+        .message-container {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+        }
+        
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .user-avatar {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        
+        .bot-avatar {
+            background-color: #8e8ea0;
+            color: white;
+        }
+        
+        .message-content {
+            flex: 1;
+            line-height: 1.6;
+        }
+        
+        .input-area {
+            padding: 10px 15px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--body-bg);
+            position: relative;
+        }
+        
+        .input-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .message-input {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 45px 12px 15px;
+            background-color: var(--body-bg);
+            color: var(--text-color);
+            resize: none;
+            min-height: 52px;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.5;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+        
+        .message-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        
+        .send-button {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            background-color: transparent;
+            border: none;
+            color: var(--accent-color);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        
+        .send-button:hover {
+            background-color: var(--hover-color);
+        }
+        
+        .send-button:disabled {
+            color: var(--border-color);
+            cursor: not-allowed;
+        }
+        
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: transparent;
+            color: var(--text-color);
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        
+        .new-chat-btn:hover {
+            background-color: var(--hover-color);
+        }
+        
+        .new-chat-btn i {
+            margin-right: 10px;
+        }
+        
+        .sidebar-section {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .sidebar-footer {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+        
+        .loading {
+            display: none;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--secondary-text);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* ChatGPT-style typewriter effect */
+        .typewriter-text {
+            visibility: hidden;
+        }
+        
+        .typewriter-text .typewriter-char {
+            visibility: hidden;
+        }
+        
+        .typewriter-text .typewriter-char.visible {
+            visibility: visible;
+        }
+        
+        .file-upload-area {
+            margin-top: 15px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+        
+        .file-upload-btn {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .file-upload-btn:hover {
+            background-color: var(--hover-color);
+        }
+        
+        .file-upload-btn i {
+            margin-right: 8px;
+        }
+        
+        .uploaded-file {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background-color: var(--hover-color);
+            border-radius: 5px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .uploaded-file i {
+            cursor: pointer;
+            color: var(--secondary-text);
+        }
+        
+        .uploaded-file i:hover {
+            color: var(--text-color);
+        }
+        
+        .mobile-nav-toggle {
+            display: none;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                top: 0;
+                bottom: 0;
+                z-index: 999;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            .mobile-nav-toggle {
+                display: block;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="mobile-nav-toggle" id="mobileNavToggle">
+        <i class="bi bi-list"></i>
+    </button>
+    
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" id="resetBtn">
+                    <i class="bi bi-plus-lg"></i> New chat
+                </button>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="file-upload-area">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <label for="pdfFile" class="file-upload-btn">
+                            <i class="bi bi-upload"></i> Upload document
+                        </label>
+                        <input type="file" id="pdfFile" accept=".pdf,.docx,.txt,.md" required style="display: none;">
+                    </form>
+                    <div id="uploadStatus" class="mt-2"></div>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="theme-switch">
+                    <span>Dark mode</span>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="themeSwitch">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div id="chatContainer" class="chat-container">
+                <!-- Welcome message -->
+                <div class="message-row bot-row">
+                    <div class="message-container">
+                        <div class="avatar bot-avatar">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <div class="typewriter-container">
+                                <div class="typewriter-text" style="visibility: visible;">
+                                    <p>Hello! I'm your document assistant. Please upload a document using the sidebar, and I'll help you extract information from it.</p>
+                                    <p>Supported formats: PDF, DOCX, TXT, MD</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="uploadLoading" class="loading">
+                <div class="spinner"></div>
+                <span>Processing document, please wait...</span>
+            </div>
+            
+            <div id="chatLoading" class="loading">
+                <div class="spinner"></div>
+                <span>Thinking...</span>
+            </div>
+            
+            <div class="input-area">
+                <div class="input-container">
+                    <form id="questionForm">
+                        <textarea id="question" class="message-input" placeholder="Ask a question about the document..." rows="1" required></textarea>
+                        <button type="submit" class="send-button" id="sendButton" disabled>
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Theme switcher functionality
+            const themeSwitch = document.getElementById('themeSwitch');
+            const sendButton = document.getElementById('sendButton');
+            const questionInput = document.getElementById('question');
+            const uploadForm = document.getElementById('uploadForm');
+            const questionForm = document.getElementById('questionForm');
+            const resetBtn = document.getElementById('resetBtn');
+            const chatContainer = document.getElementById('chatContainer');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const uploadLoading = document.getElementById('uploadLoading');
+            const chatLoading = document.getElementById('chatLoading');
+            const mobileNavToggle = document.getElementById('mobileNavToggle');
+            const sidebar = document.getElementById('sidebar');
+            const pdfFile = document.getElementById('pdfFile');
+            
+            // Check for saved theme preference or use preferred color scheme
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+                themeSwitch.checked = true;
+            }
+            
+            // Handle theme switch
+            themeSwitch.addEventListener('change', function() {
+                if (this.checked) {
+                    document.documentElement.setAttribute('data-bs-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+            
+            // Mobile navigation toggle
+            mobileNavToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('active');
+            });
+            
+            // Auto-resize textarea
+            questionInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                
+                // Enable/disable send button based on input
+                sendButton.disabled = this.value.trim() === '';
+            });
+            
+            // Handle file selection
+            pdfFile.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    const fileName = this.files[0].name;
+                    
+                    // Show selected file
+                    if (!document.querySelector('.uploaded-file')) {
+                        const fileElement = document.createElement('div');
+                        fileElement.className = 'uploaded-file';
+                        fileElement.innerHTML = `
+                            <span><i class="bi bi-file-earmark-text"></i> ${fileName}</span>
+                            <i class="bi bi-x" id="removeFile"></i>
+                        `;
+                        uploadStatus.innerHTML = '';
+                        uploadStatus.appendChild(fileElement);
+                        
+                        // Add remove file handler
+                        document.getElementById('removeFile').addEventListener('click', function() {
+                            pdfFile.value = '';
+                            uploadStatus.innerHTML = '';
+                        });
+                    }
+                    
+                    // Auto submit the form when file is selected
+                    uploadForm.dispatchEvent(new Event('submit'));
+                }
+            });
+            
+            // Handle PDF upload
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const file = pdfFile.files[0];
+                
+                if (!file) {
+                    return;
+                }
+                
+                // Show loading indicator
+                uploadLoading.style.display = 'block';
+                
+                // Create FormData object
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Send file to server
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    uploadLoading.style.display = 'none';
+                    
+                    if (data.error) {
+                        uploadStatus.innerHTML = `<div class="text-danger mt-2"><i class="bi bi-exclamation-triangle"></i> ${data.error}</div>`;
+                    } else {
+                        // Enable the question input after successful upload
+                        sendButton.disabled = questionInput.value.trim() === '';
+                        
+                        // Add system message about successful upload
+                        addBotMessage(`I've processed your document "${file.name}". You can now ask questions about it.`);
+                    }
+                })
+                .catch(error => {
+                    uploadLoading.style.display = 'none';
+                    uploadStatus.innerHTML = `<div class="text-danger mt-2"><i class="bi bi-exclamation-triangle"></i> Error: ${error.message}</div>`;
+                });
+            });
+            
+            // Function to add a user message to the chat
+            function addUserMessage(text) {
+                const messageRow = document.createElement('div');
+                messageRow.className = 'message-row user-row';
+                
+                messageRow.innerHTML = `
+                    <div class="message-container">
+                        <div class="avatar user-avatar">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div class="message-content">${text}</div>
+                    </div>
+                `;
+                
+                chatContainer.appendChild(messageRow);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // Function to add a bot message to the chat with ChatGPT-style typewriter effect
+            function addBotMessage(text) {
+                const messageRow = document.createElement('div');
+                messageRow.className = 'message-row bot-row';
+                
+                // Create the message structure first without the text content
+                messageRow.innerHTML = `
+                    <div class="message-container">
+                        <div class="avatar bot-avatar">
+                            <i class="bi bi-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <div class="typewriter-container"></div>
+                        </div>
+                    </div>
+                `;
+                
+                chatContainer.appendChild(messageRow);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                
+                // Get the container for the typewriter effect
+                const typewriterContainer = messageRow.querySelector('.typewriter-container');
+                
+                // Create the typewriter element
+                const typewriterElement = document.createElement('div');
+                typewriterElement.className = 'typewriter-text';
+                typewriterContainer.appendChild(typewriterElement);
+                
+                // Process HTML content
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = text;
+                const textContent = tempDiv.innerHTML;
+                
+                // Split content into individual characters with HTML preserved
+                let htmlChars = [];
+                let inTag = false;
+                let currentTag = '';
+                let currentText = '';
+                
+                for (let i = 0; i < textContent.length; i++) {
+                    const char = textContent[i];
+                    
+                    if (char === '<') {
+                        // If we have accumulated text, add it to the array
+                        if (currentText) {
+                            for (const c of currentText) {
+                                htmlChars.push({ type: 'char', content: c });
+                            }
+                            currentText = '';
+                        }
+                        inTag = true;
+                        currentTag = char;
+                    } else if (char === '>' && inTag) {
+                        currentTag += char;
+                        htmlChars.push({ type: 'tag', content: currentTag });
+                        inTag = false;
+                        currentTag = '';
+                    } else if (inTag) {
+                        currentTag += char;
+                    } else {
+                        currentText += char;
+                    }
+                }
+                
+                // Add any remaining text
+                if (currentText) {
+                    for (const c of currentText) {
+                        htmlChars.push({ type: 'char', content: c });
+                    }
+                }
+                
+                // Create span elements for each character
+                let html = '';
+                for (const item of htmlChars) {
+                    if (item.type === 'tag') {
+                        html += item.content;
+                    } else {
+                        html += `<span class="typewriter-char">${item.content}</span>`;
+                    }
+                }
+                
+                typewriterElement.innerHTML = html;
+                typewriterElement.style.visibility = 'visible';
+                
+                // Get all character spans
+                const charElements = typewriterElement.querySelectorAll('.typewriter-char');
+                
+                // Calculate typing speed based on content length
+                const charCount = charElements.length;
+                const baseSpeed = 10; // characters per second
+                const totalDuration = Math.min(charCount / baseSpeed, 8); // cap at 8 seconds for very long responses
+                const intervalTime = totalDuration * 1000 / charCount;
+                
+                // Animate each character appearing
+                let charIndex = 0;
+                const typeInterval = setInterval(() => {
+                    if (charIndex < charElements.length) {
+                        charElements[charIndex].classList.add('visible');
+                        charIndex++;
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    } else {
+                        clearInterval(typeInterval);
+                    }
+                }, intervalTime);
+            }
+            
+            // Handle asking questions
+            questionForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const question = questionInput.value.trim();
+                
+                if (!question) return;
+                
+                // Add user message to chat
+                addUserMessage(question);
+                
+                // Clear input and reset height
+                questionInput.value = '';
+                questionInput.style.height = 'auto';
+                sendButton.disabled = true;
+                
+                // Show loading indicator
+                chatLoading.style.display = 'block';
+                
+                // Send question to server
+                fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ question: question })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    chatLoading.style.display = 'none';
+                    
+                    if (data.error) {
+                        // Errors don't get typewriter effect for better visibility
+                        const messageRow = document.createElement('div');
+                        messageRow.className = 'message-row bot-row';
+                        messageRow.innerHTML = `
+                            <div class="message-container">
+                                <div class="avatar bot-avatar">
+                                    <i class="bi bi-robot"></i>
+                                </div>
+                                <div class="message-content">
+                                    <span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Error: ${data.error}</span>
+                                </div>
+                            </div>
+                        `;
+                        chatContainer.appendChild(messageRow);
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    } else {
+                        // Format the answer with line breaks
+                        const formattedAnswer = data.answer.replace(/\n/g, '<br>');
+                        addBotMessage(formattedAnswer);
+                    }
+                })
+                .catch(error => {
+                    chatLoading.style.display = 'none';
+                    // Errors don't get typewriter effect for better visibility
+                    const messageRow = document.createElement('div');
+                    messageRow.className = 'message-row bot-row';
+                    messageRow.innerHTML = `
+                        <div class="message-container">
+                            <div class="avatar bot-avatar">
+                                <i class="bi bi-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                <span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Error: ${error.message}</span>
+                            </div>
+                        </div>
+                    `;
+                    chatContainer.appendChild(messageRow);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                });
+            });
+            
+            // Handle reset conversation
+            resetBtn.addEventListener('click', function() {
+                fetch('/reset', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Clear chat and show welcome message
+                    chatContainer.innerHTML = '';
+                    addBotMessage(`Hello! I'm your document assistant. Please upload a document using the sidebar, and I'll help you extract information from it.<br><br>Supported formats: PDF, DOCX, TXT, MD`);
+                    
+                    // Reset file input
+                    pdfFile.value = '';
+                    uploadStatus.innerHTML = '';
+                    sendButton.disabled = true;
+                })
+                .catch(error => {
+                    alert(`Error: ${error.message}`);
+                });
+            });
+            
+            // Handle Enter key to send message (Shift+Enter for new line)
+            questionInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey && !sendButton.disabled) {
+                    e.preventDefault();
+                    questionForm.dispatchEvent(new Event('submit'));
+                }
+            });
+        });
+    </script>
+</body>
+</html>
